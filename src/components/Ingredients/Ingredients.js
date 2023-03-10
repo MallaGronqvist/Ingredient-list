@@ -1,32 +1,97 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
 import IngredientForm from "./IngredientForm";
 import IngredientList from "./IngredientList";
 import Search from "./Search";
+import ErrorModal from "../UI/ErrorModal";
 
 function Ingredients() {
   const [ingredients, setIngredients] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState();
+  /*
+  useEffect(() => {
+    fetch(
+      "https://react-http-6016b-default-rtdb.europe-west1.firebasedatabase.app/ingredients.json"
+    )
+      .then((response) => response.json())
+      .then((responseData) => {
+        const loadedIngredients = [];
+        for (const key in responseData) {
+          loadedIngredients.push({
+            id: key,
+            title: responseData[key].title,
+            amount: responseData[key].amount,
+          });
+        }
+        setIngredients(loadedIngredients);
+      });
+  }, []);
+*/
+  const filteredIngredientsHandler = useCallback((filteredIngredients) => {
+    setIngredients(filteredIngredients);
+  }, []);
 
   const addIngredientHandler = (ingredient) => {
-    setIngredients((prevIngredients) => [
-      ...prevIngredients,
-      { id: Math.random().toString(), ...ingredient },
-    ]);
+    setIsLoading(true);
+    fetch(
+      "https://react-http-6016b-default-rtdb.europe-west1.firebasedatabase.app/ingredients.json",
+      {
+        method: "POST",
+        body: JSON.stringify(ingredient),
+        headers: { "Content-Type": "application/json" },
+      }
+    )
+      .then((response) => {
+        setIsLoading(false);
+        return response.json();
+      })
+      .then((responseData) => {
+        setIngredients((prevIngredients) => [
+          ...prevIngredients,
+          { id: responseData.name, ...ingredient },
+        ]);
+      });
   };
 
   const removeIngredientHandler = (id) => {
-    setIngredients((prevIngredients) =>
-      prevIngredients.filter((ingredient) => ingredient.id !== id)
-    );
+    setIsLoading(true);
+    fetch(
+      `https://react-http-6016b-default-rtdb.europe-west1.firebasedatabase.app/ingredients/${id}.json`,
+      {
+        method: "DELETE",
+      }
+    )
+      .then((response) => {
+        setIsLoading(false);
+        setIngredients((prevIngredients) =>
+          prevIngredients.filter((ingredient) => ingredient.id !== id)
+        );
+      })
+      .catch((error) => {
+        setError("Something went wrong!");
+        setIsLoading(false);
+      });
+  };
+
+  const clearError = () => {
+    setError(null);
   };
 
   return (
     <div className="App">
-      <IngredientForm onAddIngredient={addIngredientHandler} />
+      {error && <ErrorModal onClose={clearError}>{error}</ErrorModal>}
+      <IngredientForm
+        onAddIngredient={addIngredientHandler}
+        loading={isLoading}
+      />
 
       <section>
-        <Search />
-        <IngredientList ingredients={ingredients} onRemoveItem={removeIngredientHandler} />
+        <Search onLoadIngredients={filteredIngredientsHandler} />
+        <IngredientList
+          ingredients={ingredients}
+          onRemoveItem={removeIngredientHandler}
+        />
       </section>
     </div>
   );

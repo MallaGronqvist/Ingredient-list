@@ -1,4 +1,4 @@
-import React, { useReducer, useEffect, useCallback } from "react";
+import React, { useReducer, useEffect, useCallback, useMemo } from "react";
 
 import IngredientForm from "./IngredientForm";
 import IngredientList from "./IngredientList";
@@ -64,7 +64,7 @@ function Ingredients() {
     dispatch({ type: "SET", ingredients: filteredIngredients });
   }, []);
 
-  const addIngredientHandler = (ingredient) => {
+  const addIngredientHandler = useCallback((ingredient) => {
     dispatchHttp({type: 'SEND'});
     fetch(
       "https://react-http-6016b-default-rtdb.europe-west1.firebasedatabase.app/ingredients.json",
@@ -89,10 +89,10 @@ function Ingredients() {
           type: "ADD",
           ingredient: { id: responseData.name, ...ingredient },
         });
-      });
-  };
+      })
+  }, []);
 
-  const removeIngredientHandler = (id) => {
+  const removeIngredientHandler = useCallback((id) => {
     dispatchHttp({type: 'SEND'});
     fetch(
       `https://react-http-6016b-default-rtdb.europe-west1.firebasedatabase.app/ingredients/${id}.json`,
@@ -110,11 +110,20 @@ function Ingredients() {
       .catch((error) => {
           dispatchHttp({type: 'ERROR', errorMessage: 'Something went wrong!'})
       });
-  };
+  }, []);
 
-  const clearError = () => {
+  const clearError = useCallback(() => {
     dispatch({type: 'CLEAR'});
-  };
+  }, []);
+
+  const ingredientList = useMemo(() => {
+    return (
+    <IngredientList
+          ingredients={ingredients}
+          onRemoveItem={removeIngredientHandler}
+        />
+    );
+  }, [ingredients, removeIngredientHandler]);
 
   return (
     <div className="App">
@@ -126,10 +135,7 @@ function Ingredients() {
 
       <section>
         <Search onLoadIngredients={filteredIngredientsHandler} />
-        <IngredientList
-          ingredients={ingredients}
-          onRemoveItem={removeIngredientHandler}
-        />
+        {ingredientList}
       </section>
     </div>
   );
